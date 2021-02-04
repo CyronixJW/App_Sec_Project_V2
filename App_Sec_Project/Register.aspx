@@ -115,7 +115,7 @@
                 </div>
              <div class="form-group">
                   Date of birth
-                <asp:TextBox ID="tb_dateofbirth" CssClass="form-control" runat="server"></asp:TextBox>
+                <asp:TextBox ID="tb_dateofbirth" CssClass="form-control" runat="server"></asp:TextBox><asp:Label runat="server" ID="lbl_dob"></asp:Label>
 
                  </div>
                     <div class="form-group">

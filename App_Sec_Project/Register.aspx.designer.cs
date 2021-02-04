@@ -186,6 +186,15 @@ namespace App_Sec_Project
         protected global::System.Web.UI.WebControls.TextBox tb_dateofbirth;
 
         /// <summary>
+        /// lbl_dob control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lbl_dob;
+
+        /// <summary>
         /// btn_submit control.
         /// </summary>
         /// <remarks>

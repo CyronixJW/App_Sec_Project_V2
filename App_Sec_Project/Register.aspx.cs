@@ -107,54 +107,62 @@ namespace App_Sec_Project
         {
             bool result = true;
 
+            bool fname = true;
+            bool lname = true;
+            bool ccname = true;
+            bool ccnum = true;
+            bool ccexpiry = true;
+            bool dob = true;
+            
+
 
             if (string.IsNullOrEmpty(tb_fname.Text) == true)
             {
                 lbl_fname_validate.Text = "Field cannot be empty!";
-                result = false;
+                fname = false;
             }
             else
             {
-                result = true;
+                fname = true;
                 lbl_fname_validate.Text = "";
             }
             if (string.IsNullOrEmpty(tb_lname.Text) == true)
             {
                 lbl_lname_validate.Text = "Field cannot be empty!";
-                result = false;
+                lname = false;
             }
             else
             {
-                lbl_fname_validate.Text = "";
-                result = false;
+                lbl_lname_validate.Text = "";
+                lname = true;
             }
             if (string.IsNullOrEmpty(tb_cc_name.Text) == true)
             {
                 lbl_cc_name_validate.Text = "Field cannot be empty!";
-                result = false;
+                ccname = false;
             }
             else
             {
                 lbl_cc_name_validate.Text = "";
-                result = true;
+                ccname = true;
             }
             int cc_num_result = 0;
             if (tb_cc_number.Text == "" && tb_cc_number.Text.Length == 0)
             {
                 lbl_cc_number_validate.Text = "Field cannot be empty !";
-                result = false;
+                ccnum = false;
 
             }
             else if (Int32.TryParse(tb_cc_number.Text, out cc_num_result) == false)
             {
                 lbl_cc_number_validate.Text = "Only numbers are allowed!";
-                result = false;
+                ccnum = false;
             }
 
             else
             {
                 lbl_cc_number_validate.Text = "";
-                result = true;
+                ccnum = true;
             }
 
 
@@ -163,25 +171,44 @@ namespace App_Sec_Project
             DateTime dsnow = DateTime.ParseExact(dss, "MM/yy", CultureInfo.InvariantCulture, DateTimeStyles.None);
 
             DateTime expiry_result;
-            if (tb_dateofbirth.Text == "")
+            if (tb_cc_expiry.Text == "" && tb_cc_expiry.Text.Length == 0)
             {
-                result = false;
+                ccexpiry = false;
                 lbl_expirydate_validate.Text = "Field cannot be empty !";
             }
             else if (DateTime.TryParseExact(tb_cc_expiry.Text, "MM/yy", CultureInfo.InvariantCulture, DateTimeStyles.None, out expiry_result) == false)
             {
+                ccexpiry = false;
                 lbl_expirydate_validate.Text = "Invalid Expiry Date";
-                result = false;
+                
             }
             else if (expiry_result < dsnow)
             {
                 lbl_expirydate_validate.Text = "Card has expired !";
-                result = false;
+                ccexpiry = false;
             }
             else
             {
                 lbl_expirydate_validate.Text = "";
+                ccexpiry = true;
+            }
+            if (tb_dateofbirth.Text == "" && tb_dateofbirth.Text.Length == 0)
+            {
+                dob = false;
+                lbl_dob.Text = "Field cannot be empty !";
+            }
+            else
+            {
+                dob = true;
+                lbl_dob.Text = "";
+            }
+            if (fname && lname && ccname && ccexpiry && ccnum  && dob == true)
+            {
                 result = true;
+            }
+            else
+            {
+                result = false;
             }
             return result;
 
@@ -196,7 +223,7 @@ namespace App_Sec_Project
                 using (SqlConnection con = new SqlConnection(MYDBConnectionString))
                 {
                     using (SqlCommand cmd = new SqlCommand("BEGIN IF NOT EXISTS(SELECT* FROM Users WHERE Email = @Email)" +
-                        "BEGIN INSERT INTO Users VALUES(@Id,@Email,@FirstName,@LastName, @PasswordHash, @PasswordSalt, @DateTimeRegistered, @MobileVerified, @EmailVerified,@CreditCardName,@CreditCardNumber,@CreditCardExpiryDate,@CreditCardCVV,@DateofBirth, @IV, @KEY)" +
+                        "BEGIN INSERT INTO Users VALUES(@Id,@Email,@FirstName,@LastName, @PasswordHash, @PasswordSalt, @DateTimeRegistered, @MobileVerified, @EmailVerified,@CreditCardName,@CreditCardNumber,@CreditCardExpiryDate,@CreditCardCVV,@DateofBirth, @IV, @KEY,@StatusId,@Lockoutdatetime,@oldpasswordhash,@changedpasswordtime)" +
                         "END END;")
                         )
                     {
@@ -219,6 +246,11 @@ namespace App_Sec_Project
                             cmd.Parameters.AddWithValue("@DateofBirth", tb_dateofbirth.Text.ToString());
                             cmd.Parameters.AddWithValue("@IV", Convert.ToBase64String(IV));
                             cmd.Parameters.AddWithValue("@KEY", Convert.ToBase64String(Key));
+                            cmd.Parameters.AddWithValue("@StatusId", 1);
+                            cmd.Parameters.AddWithValue("@Lockoutdatetime", DBNull.Value);
+                            cmd.Parameters.AddWithValue("@oldpasswordhash", DBNull.Value);
+                            cmd.Parameters.AddWithValue("@changedpasswordtime", DBNull.Value);
+
 
 
                             cmd.Connection = con;

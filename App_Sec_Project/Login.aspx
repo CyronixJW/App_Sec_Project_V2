@@ -1,6 +1,16 @@
 ﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Login.aspx.cs" Inherits="App_Sec_Project.Login" %>
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+     <script src="https://www.google.com/recaptcha/api.js?render=6LcPlEkaAAAAANdf6QMsUxJPuC-B8PLcJSMKVQPx"></script>
+    <script>
 
+        grecaptcha.ready(function () {
+
+            grecaptcha.execute('6LcPlEkaAAAAANdf6QMsUxJPuC-B8PLcJSMKVQPx', { action: 'Login' }).then(function (token) {
+
+                document.getElementById("g-recaptcha-response").value = token;
+            });
+        })
+    </script>
     <div class="form-group">
 
             <h2 class="h2">Login</h2>
@@ -22,4 +32,9 @@
                  </div>
         
              <asp:Label runat="server" ID="lbl_errormsg" CssClass=" control-label label-danger"></asp:Label>
+               <div class="form-group">
+                   <input type="hidden" id="g-recaptcha-response" name="ge-recaptcha-response" />
+                   <asp:Label runat="server" EnableViewState="false" ID="lbl_messsage"></asp:Label>
+               </div>
+
 </asp:Content>

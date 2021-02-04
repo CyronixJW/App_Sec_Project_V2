@@ -2,10 +2,14 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web;
+using System.Web.Script.Serialization;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
@@ -23,6 +27,36 @@ namespace App_Sec_Project
 
         }
 
+        public bool ValidateCaptcha()
+        {
+            bool result = true;
+            string captchaResponse = Request.Form["g-recaptcha-response"];
+
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create
+                ("https://www.google.com/recaptcha/api/siteverify?secret=6LcPlEkaAAAAAJMYxLViADrqX3DlbgOouCvkmVmc &response=" + captchaResponse);
+            try
+            {
+                using (WebResponse wResponse = req.GetResponse())
+                {
+                    using(StreamReader readStream = new StreamReader(wResponse.GetResponseStream()))
+                    {
+                        string jsonResponse = readStream.ReadToEnd();
+
+                        JavaScriptSerializer js = new JavaScriptSerializer();
+
+                        MyObject jsonObject = js.Deserialize<MyObject>(jsonResponse);
+
+                        result = Convert.ToBoolean(jsonObject.success);
+                    }
+                }
+                return result;
+            }
+            catch(WebException ex)
+            {
+                throw ex;
+            }
+
+        }
         protected void btn_login_Click(object sender, EventArgs e)
         {
 
@@ -31,61 +65,130 @@ namespace App_Sec_Project
             SHA512Managed hashing = new SHA512Managed();
             string dbHash = getDBHash(userid);
             string dbSalt = getDBSalt(userid);
-
-
-            try
+            if(ValidateCaptcha())
             {
-                if (dbSalt != null && dbSalt.Length > 0 && dbHash != null && dbHash.Length > 0)
+                if (ValidatePassword() == true)
                 {
-                    string pwdWithSalt = pwd + dbSalt;
-                    byte[] hashWithSalt = hashing.ComputeHash(Encoding.UTF8.GetBytes(pwdWithSalt));
-                    string userHash = Convert.ToBase64String(hashWithSalt);
-                    if (userHash.Equals(dbHash))
+
+
+
+
+
+
+
+                    try
                     {
-                        Session["UserID"] = userid;
+                        if (dbSalt != null && dbSalt.Length > 0 && dbHash != null && dbHash.Length > 0)
+                        {
+                            string pwdWithSalt = pwd + dbSalt;
+                            byte[] hashWithSalt = hashing.ComputeHash(Encoding.UTF8.GetBytes(pwdWithSalt));
+                            string userHash = Convert.ToBase64String(hashWithSalt);
+                            if (userHash.Equals(dbHash))
+                            {
 
-                        string guid = Guid.NewGuid().ToString();
-                        Session["AuthToken"] = guid;
+                                ReactivateLoginAccount();
 
-                        Response.Cookies.Add(new HttpCookie("AuthToken", guid));
-                        Session["LoginCount"] = 0;
-                        Response.Redirect("~/Welcome.aspx", false);
+                                Checkpasswordage();
+                                Session["UserID"] = userid;
+
+
+                                string guid = Guid.NewGuid().ToString();
+                                Session["AuthToken"] = guid;
+
+                                Response.Cookies.Add(new HttpCookie("AuthToken", guid));
+                                Session["LoginCount"] = 0;
+                                Response.Redirect("~/Welcome.aspx", false);
+                            }
+                            else
+                            {
+                                Session["LoginCount"] = Convert.ToInt32(Session["LoginCount"]) + 1;
+
+                                if (Convert.ToInt32(Session["LoginCount"]) > 3)
+                                {
+                                    lbl_errormsg.Text = DeactivateLoginAccount();
+                                }
+                                else
+                                {
+                                    lbl_errormsg.Text = "Userid or password is not valid. Please try again.";
+                                }
+
+                            }
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        Session["LoginCount"] = Convert.ToInt32(Session["LoginCount"]) + 1;
-
-                        if (Convert.ToInt32(Session["LoginCount"]) > 3)
-                        {
-                            lbl_errormsg.Text = DeactivateLoginAccount();
-                        }
-                        else
-                        {
-                            lbl_errormsg.Text = "Userid or password is not valid. Please try again.";
-                        }
-
+                        throw new Exception(ex.ToString());
                     }
+                    finally { }
+
+
                 }
+
             }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.ToString());
-            }
-            finally { }
-
-
-
-
         }
-        public string DeactivateLoginAccount()
+        public void ReactivateLoginAccount()
         {
             DataSet ds = new DataSet();
+           
+            
+
+
             SqlConnection connection = new SqlConnection(MYDBConnectionString);
-            string sql = "select * from Users Where Email= @Email;Update Users set StatusId=0 Where Email= @Email;";
+            string sql = "select * from Users Where Email= @Email;Update Users set StatusId=@StatusId,Lockoutdatetime = @Lockout Where Email= @Email;";
+            string sqlselect = "Select * FROM Users WHERE Email = @Email";
+
+            SqlCommand selectsql = new SqlCommand(sqlselect, connection);
+            connection.Open();
 
 
             SqlCommand cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("@Email", tb_email.Text);
+            cmd.Parameters.AddWithValue("@Lockout", DBNull.Value);
+            cmd.Parameters.AddWithValue("@StatusId", 1);
+            selectsql.Parameters.AddWithValue("@Email", tb_email.Text);
+            SqlDataReader myReader = selectsql.ExecuteReader();
+            string lockouttime = "";
+            while (myReader.Read())
+            {
+                lockouttime = myReader.GetValue(17).ToString();
+            }
+            myReader.Close();
+            if (lockouttime != "")
+            {
+                string dst = DateTime.Now.ToString();
+                DateTime lockout = DateTime.Parse(lockouttime);
+                DateTime dsnow = DateTime.Parse(dst);
+ 
+               
+                TimeSpan timeSpan = dsnow - lockout;
+                SqlDataAdapter sda = new SqlDataAdapter();
+                sda.SelectCommand = cmd;
+
+
+
+                if (timeSpan.TotalMinutes > 5)
+                {
+                    sda.Fill(ds);
+                }
+
+            }
+        }
+    
+
+        public string DeactivateLoginAccount()
+        {
+            DataSet ds = new DataSet();
+
+            DateTime dnow = DateTime.Now;
+
+
+            SqlConnection connection = new SqlConnection(MYDBConnectionString);
+            string sql = "select * from Users Where Email= @Email;Update Users set StatusId=0,Lockoutdatetime = @Lockout Where Email= @Email;";
+
+
+            SqlCommand cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@Email", tb_email.Text);
+            cmd.Parameters.AddWithValue("@Lockout", dnow);
             SqlDataAdapter sda = new SqlDataAdapter();
             sda.SelectCommand = cmd;
             connection.Open();
@@ -101,18 +204,62 @@ namespace App_Sec_Project
                 return "Please enter a valid login detail.";
             }
 
-        
-    
-           
+
+
+
         }
-        
-            
-            
+
+
+        public void Checkpasswordage()
+        {
+            SqlConnection connection = new SqlConnection(MYDBConnectionString);
+
+            string sqlselect = "Select * FROM Users WHERE Email = @Email";
+
+            SqlCommand selectsql = new SqlCommand(sqlselect, connection);
+            connection.Open();
+
+
            
-               
-                
-          
-        
+            selectsql.Parameters.AddWithValue("@Email", tb_email.Text);
+            SqlDataReader myReader = selectsql.ExecuteReader();
+            string changedpasswordtime = "";
+            while (myReader.Read())
+            {
+                changedpasswordtime = myReader.GetValue(19).ToString();
+            }
+            myReader.Close();
+            if (changedpasswordtime != "")
+            {
+                string dst = DateTime.Now.ToString();
+                DateTime lockout = DateTime.Parse(changedpasswordtime);
+                DateTime dsnow = DateTime.Parse(dst);
+
+
+                TimeSpan timeSpan = dsnow - lockout;
+
+                if (timeSpan.TotalMinutes > 15)
+                {
+                    Session["UserID"] = tb_email.Text;
+
+
+                    string guid = Guid.NewGuid().ToString();
+                    Session["AuthToken"] = guid;
+
+                    Response.Cookies.Add(new HttpCookie("AuthToken", guid));
+                    Session["LoginCount"] = 0;
+                    lbl_errormsg.Text = "Password has expired please change to a new password";
+                    Response.Redirect("~/ChangePassword.aspx", false);
+
+                }
+
+            }
+
+        }
+
+
+
+
         protected string getDBHash(string userid)
         {
             string h = null;
@@ -178,6 +325,48 @@ namespace App_Sec_Project
             finally { connection.Close(); }
             return s;
         }
+        public bool ValidatePassword()
+        {
+            bool result = false;
+            bool chkuserid = true;
+            bool chkpwd = true;
+            if (string.IsNullOrEmpty(tb_email.Text) == true)
+            {
+               lbl_email_validate.Text = " UserID cannot be null!";
+                chkuserid = false;
+            }
+            else
+            {
+                lbl_email_validate.Text = "";
+                chkuserid = true;
+            }
+            if (string.IsNullOrEmpty(tb_pwd.Text) == true)
+            {
+                lbl_pwd_validate.Text = " Password cannot be null!";
+                chkpwd = false;
+            }
+            else
+            {
+                lbl_pwd_validate.Text = "";
+                chkpwd = true;
+            }
+            if(chkpwd && chkuserid == true)
+            {
+                result = true;
+            }
+            else
+            {
+                result = false;
+            }
+            
+            return result;
+        }
 
     }
+    public class MyObject
+    {
+        public string success { get; set; }
+        public List<string> ErrorMessage { get; set; } 
+    }
+
 }

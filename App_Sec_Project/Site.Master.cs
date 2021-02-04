@@ -27,7 +27,19 @@ namespace App_Sec_Project
                 userID = (string)Session["userID"];
 
                 btn_logout.Visible = true;
+                anchor_changepassword.Visible = true;
+                anchor_userprofile.Visible = true;
+                anchor_login.Visible = false;
+                anchor_register.Visible = false;
                 displayUserProfile(userID);
+            }
+            else
+            {
+                btn_logout.Visible = false;
+                anchor_changepassword.Visible = false;
+                anchor_userprofile.Visible = false;
+                anchor_login.Visible = true;
+                anchor_register.Visible = true;
             }
         }
 
