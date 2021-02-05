@@ -30,10 +30,10 @@ namespace App_Sec_Project
         public bool ValidateCaptcha()
         {
             bool result = true;
-            string captchaResponse = Request.Form["g-recaptcha-response"];
+            string captchaResponse = g.Value;
 
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create
-                ("https://www.google.com/recaptcha/api/siteverify?secret=6LcPlEkaAAAAAJMYxLViADrqX3DlbgOouCvkmVmc &response=" + captchaResponse);
+                ("https://www.google.com/recaptcha/api/siteverify?secret=6LcPlEkaAAAAAJMYxLViADrqX3DlbgOouCvkmVmc&response="+captchaResponse);
             try
             {
                 using (WebResponse wResponse = req.GetResponse())

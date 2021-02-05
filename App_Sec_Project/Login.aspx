@@ -7,8 +7,10 @@
 
             grecaptcha.execute('6LcPlEkaAAAAANdf6QMsUxJPuC-B8PLcJSMKVQPx', { action: 'Login' }).then(function (token) {
 
-                document.getElementById("g-recaptcha-response").value = token;
+                document.getElementById('<%=g.ClientID%>').value = token;
+                console.log(token);
             });
+            
         })
     </script>
     <div class="form-group">
@@ -28,12 +30,12 @@
 
              </div>
              <div class="form-group">
-                  <asp:Button runat="server" CssClass="btn-primary btn" ID="btn_login" Width="100%" Text="Login" OnClick="btn_login_Click" />
+                  <asp:Button runat="server"  CssClass="btn-primary btn" ID="btn_login" Width="100%" Text="Login" OnClick="btn_login_Click" />
                  </div>
         
              <asp:Label runat="server" ID="lbl_errormsg" CssClass=" control-label label-danger"></asp:Label>
                <div class="form-group">
-                   <input type="hidden" id="g-recaptcha-response" name="ge-recaptcha-response" />
+                  <asp:HiddenField runat="server" ID="g" />
                    <asp:Label runat="server" EnableViewState="false" ID="lbl_messsage"></asp:Label>
                </div>
 
